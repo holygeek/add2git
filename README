@@ -1,6 +1,6 @@
 cpan2git - automatically commit your site_perl directory after any update via cpan/cpanm
 
-I use perl via perlbrew wanted a way to automatically manage all the perl
+I use perl via perlbrew and wanted a way to automatically manage all the perl
 packages that I install via cpan, or cpanm into a git repository. Thus born
 cpan2git.
 

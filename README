@@ -7,8 +7,8 @@ cpan2git.
 How to use it:
 
 1. Initialize and commit a git repo in your site_perl directory, say
-   $HOME/perl5/perlbrew/perls, or $HOME/perl5/perlbrew/perls/per-$version/ if you
-   want to separate the git repositories by hte perl version.
+   $HOME/perl5/perlbrew/perls, or $HOME/perl5/perlbrew/perls/perl-$version/ if
+   you want to separate the git repositories by the perl version.
 
 2. Start using cpan2git for installing your cpan packages like this:
 

@@ -1,0 +1,102 @@
+#!/usr/bin/env perl
+
+use File::Basename;
+use Getopt::Long;
+use App::gh::Git;
+
+my ($cpantool, $help);
+
+my $ok = GetOptions (
+			'via=s' => \$cpantool,
+			help => \$help,
+		 );
+
+if (! $ok || (!$help && ! $cpantool)) {
+	usage();
+	exit 1;
+}
+
+if ($help) {
+	usage();
+	exit 0;
+}
+
+my $git_work_dir = get_git_work_dir($cpantool);
+my $repo = Git->repository(Directory => $git_work_dir);
+die "$git_work_dir is not clean" if not_clean($repo);
+
+system(split(/  */, $cpantool), @ARGV);
+my $cpan_exit = $?;
+
+die "failed to execute: $!" if $cpan_exit == -1;
+
+die sprintf "child died with signal %d, %s coredump\n",
+		($cpan_exit & 127),  ($cpan_exit & 128) ? 'with' : 'without'
+	if $cpan_exit & 127;
+
+$cpan_exit >>= 8;
+die "Error while running $cpantool\n" if $cpan_exit != 0;
+
+commit_changes($repo, join(' ', $cpantool, @ARGV));
+exit 0;
+
+sub usage {
+	print 'SYNOPSIS
+	add2git --via <cpan tool> <args>
+
+DESCRIPTION
+	add2git has only one goal: Keep all your <cpan tool>-installed perl
+	packages in a git repository.
+
+	<cpan tool> could be cpan, cpanm, cpanp.
+
+	If your site-perl directory is not clean it aborts the install process.
+
+	The way it works it simple:
+
+	add2git installs the specified cpan package using the tool specified via
+	the --via option and commits the changed files into the first git
+	repository that it found by traversing upwards in the path starting at the
+	path found given by `which <cpan tool>`.
+
+OPTIONS
+	--help
+		Show this help message.
+
+	--via <cpantool>
+		Use <cpantool> to update your perl packages
+
+EXAMPLES
+	$ add2git --via cpanm Foo::Bar
+	$ add2git --via "cpanp -i" Foo::Bar
+';
+}
+
+sub commit_changes {
+	my ($repo, $message) = @_;
+
+	$repo->command(qw/add ./);
+	$repo->command('commit', '-m', $message);
+}
+
+sub not_clean {
+	my ($repo) = @_;
+
+	my @output = $repo->command(qw/status --short/);
+	return scalar @output > 0;
+}
+
+sub get_git_work_dir {
+	my ($cpantool) = @_;
+
+	my $tool = (split(/  */, $cpantool))[0];
+	chomp (my $tooldir = `which $tool`);
+	return undef if length $tooldir == 0;
+
+	my $dir = $tooldir;
+	while ($dir ne '/' && ! -d "$dir/.git") {
+		$dir = dirname($dir);
+	}
+	die "No git dir found anywhere in $tooldir" if $dir eq '/';
+	return $dir;
+}
